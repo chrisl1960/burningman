@@ -1,0 +1,1265 @@
+///**************************************************************//
+//  Name    : El Wire face expression control - Burningman 2011                                
+//  Author  : Chris Larsen
+//  Date    : August 29, 2011    
+//  Modified: August 29, 2011                                 
+//  Version : 9.0 cleaned up 8, part needs 8's pin changes                                                                
+//****************************************************************
+
+////++++++++++++++++++++++  function prototypes  +++++++++++++++++++++++++++++++++++
+void expression_change(int change_array[11][6],int delay_loop,int delay_expression);
+void check_buttons();
+void blinking();
+void cry();
+
+//define global variables and assign pins to expression segments, note: 0 pins means this segment is off (ie.e not needed in a particular expression)
+//++++++++++++++++++++++++++  end function prototypes ++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+//++++++++++++++++++++++++++  pin outpin definitions ++++++++++++++++++++++++++++++++++++++++
+
+//define global variables and assign pins to expression segments, note: 0 pins means this 
+//segment is off (ie.e not needed in a particular expression)
+
+
+//set eyebrow constants for position to make reading easier
+const int eyebrows_normal=26;
+const int eyebrows_midangry=50;
+const int eyebrows_angry=45;
+const int eyebrows_surprise=55;
+const int eyebrows_midhappy=41;
+const int eyebrows_veryhappy=42;
+const int eyebrows_verysad=51; //also used for midsurprise
+const int eyebrows_annoyed=0;
+const int eyebrows_off=0;
+
+//set topeye constants for position to make reading easier
+const int topeye_normal=65;
+const int topeye_annoyed=61;
+const int topeye_tired=61;
+const int topeye_cry=47;
+const int topeye_shock=65;
+const int topeye_off=0;
+
+//set bottomeye constants for position to make reading easier
+const int bottomeye_normal=69;
+const int bottomeye_angry=68;
+const int bottomeye_cry=39;
+const int bottomeye_off=0;
+
+//set eyelids constants for position to make reading easier
+const int eyelids_normal=66;
+const int eyelids_twothird=61;
+const int eyelids_third=68;
+const int eyelids_off=0;
+
+//set topeyeballs constants for position to make reading easier
+const int topeyeballs_center=63;
+const int topeyeballs_off=0;
+
+//set mideyeballs constants for position to make reading easier
+const int mideyeballs_center=64;
+const int mideyeballs_left=52;
+const int mideyeballs_right=67;
+const int mideyeballs_off=0;
+
+//set loweyeballs constants for position to make reading easier
+const int loweyeballs_center=60;
+const int loweyeballs_off=0;
+
+//set topmounth constants for position to make reading easier
+const int topmouth_normal=28;
+const int topmouth_smallsurprise=53;
+const int topmouth_midsurprise=26;
+const int topmouth_maxsurprise=23;
+const int topmouth_smallangry=13;
+const int topmouth_veryangry=19;
+const int topmouth_smallsad=6;
+const int topmouth_cry=12;
+const int topmouth_dead=25;
+const int topmouth_midsmile=28;
+const int topmouth_bigsmile=48;
+const int topmouth_blank=18;
+const int topmouth_off=0;
+
+//set bottommounth constants for position to make reading easier
+const int bottommouth_slightsmile=20;
+const int bottommouth_normal=0;
+const int bottommouth_bigsmile=0;
+const int bottommouth_off=0;
+
+//set eyerings constants for position to make reading easier
+const int eyerings_on=40;
+const int eyerings_off=0;
+
+//set teardrops constants for position to make reading easier
+const int teardrops_top=36;
+const int teardrops_mid=37;
+const int teardrops_low=38;
+const int teardrops_off=0;
+
+//+++++++++++++++++++++++++++++++++++  end output pin definitions  +++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+//++++++++++++++++++++++++++  change array  element definitions ++++++++++++++++++++++++++++++++++++++++
+//define constants for the elements in the change array (see "change_array" function below
+const int eyebrows=0;
+const int topeye=1;
+const int bottomeye=2;
+const int eyelids=3;
+const int topeyeballs=4;
+const int mideyeballs=5;
+const int loweyeballs=6;
+const int topmouth=7;
+const int bottommouth=8;
+const int eyerings=9;
+const int teardrops=10;
+
+//++++++++++++++++++++++++++++  end change array element definitions  +++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+//+++++++++++++++++++++++++++++++++++  button definitions ++++++++++++++++++++++++++++++++++++++++++++++
+int button_pushed;
+const int button1_Pin = 11;     
+const int button2_Pin = 27;
+const int button3_Pin = 24;
+const int button4_Pin = 43;
+const int button5_Pin = 44;
+const int buttonF_Pin = 8;
+
+// variables will change:
+int button1_State = 0;
+int button2_State = 0;
+int button3_State = 0;
+int button4_State = 0;
+int button5_State = 0;
+int buttonF_State = 0;
+
+int no_button_pushed = 1;
+int lastbutton = 0;
+int newbutton = 0;
+
+
+
+//+++++++++++++++++++++++++++++++++++  end button definitions +++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++     expression definitions     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//Define the expression_change arrays
+ 
+/*the following 23 array of arrays store the pin nums of the strands used to sequence from one expression to another. These array of arrays are passed to the 
+function "change_expression". 
+Each of the 11 array elements (which are arrays themselves) respresent face segments (eyeborws, topmouth, eyeballs, etc).  Each element of each segment 
+defines which strands of el wire needed to cycle to get a smooth animation. The first element for each segment is the starting expression position.
+The middle elements are the transition strands (no more than 4) and the last element is the ending expression position.
+If an expression changes but has no transitions, the starting strand is repeated in the middle. If the segment doesn't change, all elements are the same.
+Note: normal to normal just sets the expression to normal - no trasition needed. You can't go to any expression from any expression (there would be too many!) so
+Normal acts as an expression hub. From Normal, can go to Happy, Sad, Annoyed, Left, Right, Surprise, and Tired.
+Can go to Cry only from Sad. Can go to Angry only from Annoyed. Can go to Terror only from Surprise. Can go to Dead only from Tired.
+for example, to go from Angry to Crying, go Angry_Normal, Normal_Sad, Sad_Cry
+*/
+
+//+++++++++++++++++++++++++++++++++++  normal to happy, happy to normal  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+int normal_happy[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_midhappy,eyebrows_midhappy,eyebrows_veryhappy,eyebrows_veryhappy},
+{topeye_normal,topeye_normal,topeye_normal,topeye_shock,topeye_shock,topeye_shock},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_midsmile,topmouth_midsmile,topmouth_bigsmile,topmouth_bigsmile},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+int happy_normal[11][6]={
+{eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_midhappy,eyebrows_midhappy,eyebrows_normal,eyebrows_normal},
+{topeye_shock,topeye_shock,topeye_shock,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_normal},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_bigsmile,topmouth_bigsmile,topmouth_midsmile,topmouth_midsmile,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to sad, sad to normal  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+int normal_sad[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_normal,topeye_normal,topeye_normal,topeye_cry,topeye_cry,topeye_cry},
+{bottomeye_normal,bottomeye_normal,bottomeye_angry,bottomeye_angry,bottomeye_cry,bottomeye_cry},
+{eyelids_normal,eyelids_normal,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_smallsad,topmouth_smallsad,topmouth_cry,topmouth_cry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+int sad_normal[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_normal,eyebrows_normal},
+{topeye_cry,topeye_cry,topeye_cry,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_cry,bottomeye_cry,bottomeye_angry,bottomeye_angry,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_normal,eyelids_normal},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center},
+{topmouth_cry,topmouth_cry,topmouth_smallsad,topmouth_smallsad,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  sad to cry, cry to sad  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+int sad_cry[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry},
+{bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_top,teardrops_top,teardrops_mid,teardrops_low,teardrops_off}};
+
+int cry_sad[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry},
+{bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_cry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to left, left to normal  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to left 
+int normal_left[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left},
+{loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: left to normal 
+int left_normal[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_left,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to right, right to normal  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to right 
+int normal_right[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_right,mideyeballs_right,mideyeballs_right},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: right to normal 
+int right_normal[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_right,mideyeballs_right,mideyeballs_right,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to annoyed, annoyed to normal  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to annoyed 
+int normal_annoyed[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_annoyed,eyebrows_annoyed,eyebrows_annoyed},
+{topeye_normal,topeye_normal,topeye_normal,topeye_annoyed,topeye_annoyed,topeye_annoyed},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_angry,bottomeye_angry,bottomeye_angry},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_blank,topmouth_blank,topmouth_smallsad,topmouth_smallsad},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: annoyed to normal 
+int annoyed_normal[11][6]={
+{eyebrows_annoyed,eyebrows_annoyed,eyebrows_annoyed,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_smallsad,topmouth_smallsad,topmouth_blank,topmouth_blank,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  annoyed to angry, angry to annoyed  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: annoyed to angry 
+int annoyed_angry[11][6]={
+{eyebrows_annoyed,eyebrows_annoyed,eyebrows_midangry,eyebrows_midangry,eyebrows_angry,eyebrows_angry},
+{topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed},
+{bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_smallsad,topmouth_smallsad,topmouth_smallangry,topmouth_smallangry,topmouth_veryangry,topmouth_veryangry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: angry to annoyed
+int angry_annoyed[11][6]={
+{eyebrows_angry,eyebrows_angry,eyebrows_midangry,eyebrows_midangry,eyebrows_annoyed,eyebrows_annoyed},
+{topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed},
+{bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_angry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_veryangry,topmouth_veryangry,topmouth_smallangry,topmouth_smallangry,topmouth_smallsad,topmouth_smallsad},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  annoyed to tired  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: annoyed to tired - only need one way here, so can go from angry to annoyed to tired, or angry, annoyed, tired, normal 
+int annoyed_tired[11][6]={
+{eyebrows_annoyed,topeye_normal,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_annoyed,topeye_tired,topeye_tired},
+{bottomeye_angry,bottomeye_angry,bottomeye_angry,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_third,eyelids_third,eyelids_third},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_smallsad,topmouth_smallsad,topmouth_smallsad,topmouth_smallsad,topmouth_smallsad,topmouth_smallsad},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_on},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+
+//+++++++++++++++++++++++++++++++++++  cry terror to angry  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+int cryterror_angry[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_midangry,eyebrows_midangry,eyebrows_angry,eyebrows_angry},
+{topeye_cry,topeye_cry,topeye_cry,topeye_annoyed,topeye_annoyed,topeye_annoyed},
+{bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_angry,bottomeye_angry,bottomeye_angry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  terror to sadterror  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//note: terror to sadterror 
+int terror_sadterror[11][6]={
+{eyebrows_surprise,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_normal,topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry},
+{bottomeye_normal,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  sadterror to cryterror  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//note: terror to cryterror 
+int sadterror_cryterror[11][6]={
+{eyebrows_surprise,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_normal,topeye_cry,topeye_cry,topeye_cry,topeye_cry,topeye_cry},
+{bottomeye_normal,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry,bottomeye_cry},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_top,teardrops_top,teardrops_mid,teardrops_low,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to surprise, surprise to normal  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to surprise 
+int normal_surprise[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_verysad,eyebrows_verysad,eyebrows_surprise,eyebrows_surprise},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_smallsurprise,topmouth_smallsurprise,topmouth_midsurprise,topmouth_midsurprise,topmouth_maxsurprise},
+{bottommouth_normal,bottommouth_slightsmile,bottommouth_slightsmile,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: surprise to normal 
+int surprise_normal[11][6]={
+{eyebrows_surprise,eyebrows_surprise,eyebrows_verysad,eyebrows_verysad,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_normal},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_maxsurprise,topmouth_midsurprise,topmouth_midsurprise,topmouth_smallsurprise,topmouth_smallsurprise,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_slightsmile,bottommouth_slightsmile,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  left normal to left surprise, left surprise to  normal surprise ++++++++++++++++++++++++++++++++++
+
+//note: left normal to left surprise 
+int left_leftsurprise[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_verysad,eyebrows_verysad,eyebrows_surprise,eyebrows_surprise},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_smallsurprise,topmouth_smallsurprise,topmouth_midsurprise,topmouth_midsurprise,topmouth_maxsurprise},
+{bottommouth_normal,bottommouth_slightsmile,bottommouth_slightsmile,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: left surprise to normal surprise
+int leftsurprise_surprise[11][6]={
+{eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_slightsmile,bottommouth_slightsmile,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  left to left happy, left happy to normal happy  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: left to left happy 
+int left_lefthappy[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_midhappy,eyebrows_midhappy,eyebrows_veryhappy,eyebrows_veryhappy},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_left},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_midsmile,topmouth_midsmile,topmouth_bigsmile,topmouth_bigsmile},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: left happy to happy 
+int lefthappy_happy[11][6]={
+{eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_left,mideyeballs_left,mideyeballs_left,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_midsmile,topmouth_midsmile,topmouth_bigsmile,topmouth_bigsmile},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+
+//+++++++++++++++++++++++++++++++++++  surprise to terror, terror to surprise  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: surprise to terror 
+int surprise_terror[11][6]={
+{eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise,topmouth_veryangry,topmouth_veryangry,topmouth_veryangry},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: terror to surprise 
+int terror_surprise[11][6]={
+{eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise,eyebrows_surprise},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_veryangry,topmouth_veryangry,topmouth_veryangry,topmouth_maxsurprise,topmouth_maxsurprise,topmouth_maxsurprise},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  normal to tired, tired to normal  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to tired 
+int normal_tired[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_normal,topeye_normal,topeye_tired,topeye_tired,topeye_tired,topeye_tired},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_twothird,eyelids_twothird,eyelids_third,eyelids_third,eyelids_third},
+{topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_smallsad},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_on},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note:   tired to normal
+int tired_normal[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_tired,topeye_tired,topeye_tired,topeye_tired,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_third,eyelids_third,eyelids_twothird,eyelids_twothird,eyelids_normal,eyelids_normal},
+{topeyeballs_off,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_smallsad,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_on,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  tired to dead, dead to tired  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note:  tired to dead
+int tired_dead[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_tired,topeye_tired,topeye_tired,topeye_tired,topeye_tired,topeye_tired},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_third,eyelids_third,eyelids_third,eyelids_third,eyelids_third,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_off,loweyeballs_off,loweyeballs_off},
+{topmouth_smallsad,topmouth_smallsad,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_dead},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_on,eyerings_on,eyerings_on,eyerings_on,eyerings_on,eyerings_on},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//note: dead to tired
+int dead_tired[11][6]={
+{eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad,eyebrows_verysad},
+{topeye_tired,topeye_tired,topeye_tired,topeye_tired,topeye_tired,topeye_tired},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_third,eyelids_third,eyelids_third,eyelids_third,eyelids_third},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_off,loweyeballs_off,loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_dead,topmouth_cry,topmouth_cry,topmouth_cry,topmouth_smallsad,topmouth_smallsad},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_on,eyerings_on,eyerings_on,eyerings_on,eyerings_on,eyerings_on},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+
+//+++++++++++++++++++++++++++++++++++  normal to normal  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//note: normal to normal just sets the expression to normal - no trasition needed
+int normal_normal[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal,eyelids_normal},
+{topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center,topeyeballs_center},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  BLINKING - normal to eyes closed, eyes closed to normal  ++++++++++++++++++++++++++++++++++++++
+
+//blink animation (i.e. transistion from Normal to eyes closed)
+int normal_blinkclosed[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_normal,eyelids_twothird,eyelids_twothird,eyelids_third,eyelids_third,eyelids_off},
+{topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_off},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//blink animation (i.e. transistion from eyes closed to normal - eyes open)
+int blinkclosed_normal[11][6]={
+{eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal,eyebrows_normal},
+{topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal,topeye_normal},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_third,eyelids_third,eyelids_twothird,eyelids_twothird,eyelids_normal},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center},
+{mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal,topmouth_normal},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++  BLINKING - happy to eyes closed, eyes closed to happy  ++++++++++++++++++++++++++++++++++++++
+
+//blink animation (i.e. transistion from happy to eyes closed)
+int happy_blinkclosed[11][6]={
+{eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy},
+{topeye_shock,topeye_shock,topeye_shock,topeye_shock,topeye_shock,topeye_shock},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_normal,eyelids_twothird,eyelids_third,eyelids_third,eyelids_off},
+{topeyeballs_center,topeyeballs_center,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off},
+{mideyeballs_center,mideyeballs_center,mideyeballs_center,mideyeballs_off,mideyeballs_off,mideyeballs_off},
+{loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_off},
+{topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//blink animation (i.e. transistion from eyes closed to happy - eyes open)
+int blinkclosed_happy[11][6]={
+{eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy,eyebrows_veryhappy},
+{topeye_shock,topeye_shock,topeye_shock,topeye_shock,topeye_shock,topeye_shock},
+{bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal,bottomeye_normal},
+{eyelids_off,eyelids_third,eyelids_third,eyelids_twothird,eyelids_normal,eyelids_off},
+{topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_off,topeyeballs_center,topeyeballs_center},
+{mideyeballs_off,mideyeballs_off,mideyeballs_off,mideyeballs_center,mideyeballs_center,mideyeballs_center},
+{loweyeballs_off,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center,loweyeballs_center},
+{topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile,topmouth_bigsmile},
+{bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal,bottommouth_normal},
+{eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off,eyerings_off},
+{teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off,teardrops_off}};
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++  end of expression definitions ++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+//+++++++++++++++++++++++++++++++++++  setup ++++++++++++++++++++++++++++++++++++++++++++++
+void setup() {
+  //set all pins to output and low
+  for (int x=0;x<70;x++){
+    pinMode(x, OUTPUT);
+    digitalWrite(x,LOW);
+  }
+  //set button pins to input
+  pinMode(button1_Pin, INPUT);
+  pinMode(button2_Pin, INPUT);
+  pinMode(button3_Pin, INPUT);
+  pinMode(button4_Pin, INPUT);
+  pinMode(button5_Pin, INPUT);
+  pinMode(buttonF_Pin, INPUT);
+  
+   Serial.begin(9600);
+   
+  
+   //turn on face outline and nose
+   digitalWrite(22,HIGH);
+   
+   //set to setup expression to normal to start-
+  digitalWrite(eyebrows_normal,HIGH);
+  digitalWrite(topeye_normal,HIGH);
+  digitalWrite(bottomeye_normal,HIGH);
+  digitalWrite(eyelids_twothird,HIGH);
+  digitalWrite(topeyeballs_center,HIGH);
+  digitalWrite(mideyeballs_center,HIGH);
+  digitalWrite(loweyeballs_center,HIGH);
+  digitalWrite(topmouth_normal,HIGH);
+  digitalWrite(bottommouth_normal,HIGH);
+  digitalWrite(eyerings_off,HIGH);
+  digitalWrite(teardrops_off,HIGH);
+  
+
+ /* 
+  //this next part is test code - needs to be removed once everything is working
+  for (int x=1;x<2;x++){
+    digitalWrite(63+x,HIGH);
+  }
+*/
+}
+
+//+++++++++++++++++++++++++++++++++++  end setup ++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+//+++++++++++++++++++++++++++++++++++  main +++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void loop() {
+// check if a button was pushed
+  
+  check_buttons();
+ 
+ //++++++++++++++++++++++++++++ button 1: Anger ++++++++++++++++++++++++++++++++++++ 
+  if (newbutton == 1) //anger
+  {     
+
+
+   expression_change(normal_annoyed,70,1000);
+   expression_change(annoyed_angry,70,5000);
+   
+   while (newbutton == 1) {
+     cry (1500,4,0);
+     check_buttons;
+   }
+  
+   expression_change(angry_annoyed,70,1000);
+   expression_change(annoyed_normal,100,200);
+      
+
+  } 
+ //++++++++++++++++++++++++++++ button 2: Cry ++++++++++++++++++++++++++++++++++++ 
+  else if (newbutton == 2) //cry
+  {
+
+   //for 4 tears per button push - if hold button cry's forwever
+   
+   expression_change(normal_sad,70,500);
+   
+   while (newbutton == 2) {
+     cry (1500,4,0);
+     check_buttons;
+   }
+  
+   expression_change(cry_sad,100,1000);
+   expression_change(sad_normal,100,200);
+  }
+  
+ //++++++++++++++++++++++++++++ button 3: happy ++++++++++++++++++++++++++++++++++++  
+    else if (newbutton == 3) //happy blinking
+    {
+
+    
+      expression_change(normal_happy,100,3000);
+      
+      while (newbutton == 3) {
+        blinking(3000,3,1);
+        blinking(500,1,1);
+        check_buttons;
+      }
+      
+      expression_change(happy_normal,100,200);
+    }
+    
+ //++++++++++++++++++++++++++++ button 4: left surprise ++++++++++++++++++++++++++++++++++++ 
+    else if (newbutton == 4) //look left, surprise left, pause while 4 pushed
+    {
+
+      expression_change(normal_left,100,2000);
+      expression_change(left_leftsurprise,100,2000);
+      expression_change(leftsurprise_surprise,100,200);
+      
+      while (newbutton == 4) {
+        delay(1000);
+        check_buttons;
+      }
+      
+      expression_change(surprise_normal,100,200); 
+    }
+    
+ //++++++++++++++++++++++++++++ button 5: terror ++++++++++++++++++++++++++++++++++++     
+
+    else if (newbutton == 5) //terror
+    {
+
+       expression_change(normal_surprise,100,200);
+       expression_change(surprise_terror,100,5000);
+             
+      while (newbutton == 5) {
+        delay(1000);
+        check_buttons;
+      }
+      
+       expression_change(terror_surprise,100,200);
+       expression_change(surprise_normal,100,2000);
+    
+    }
+    
+ //++++++++++++++++++++++++++++ button 6: look left ++++++++++++++++++++++++++++++++++++   
+    else if (newbutton == 6) //left
+    {
+
+      expression_change(normal_left,100,3000);
+            
+      while (newbutton == 6) {
+        delay(1000);
+        check_buttons;
+      }
+      
+      expression_change(left_normal,100,1000);
+
+    }
+    
+ //++++++++++++++++++++++++++++ button 7: look right ++++++++++++++++++++++++++++++++++++   
+    else if (newbutton == 7) //right
+    {
+
+      expression_change(normal_right,100,3000);
+            
+      while (newbutton == 7) {
+        delay(1000);
+        check_buttons;
+      }
+      
+      expression_change(right_normal,100,1000);
+
+    }
+    
+ //++++++++++++++++++++++++++++ button 8: sad ++++++++++++++++++++++++++++++++++++   
+    else if (newbutton == 8) //sad
+    {
+ 
+      expression_change(normal_sad,100,5000);
+            
+      while (newbutton == 8) {
+        delay(1000);
+        check_buttons;
+      } 
+      
+      expression_change(sad_normal,100,1000);
+      
+    }
+    
+ //++++++++++++++++++++++++++++ button 9: annoyed ++++++++++++++++++++++++++++++++++++   
+    else if (newbutton == 9) //annoyed
+    {
+    
+      expression_change(normal_annoyed,100,5000);
+      
+      while (newbutton == 9) {
+        delay(1000);
+        check_buttons;
+      }
+      
+      expression_change(annoyed_normal,100,1000);
+      
+    }
+    
+ //++++++++++++++++++++++++++++ button 10: dead ++++++++++++++++++++++++++++++++++++   
+    else if (newbutton == 10) //dead
+    {
+ 
+      expression_change(normal_tired,100,1000);
+      expression_change(tired_dead,100,5000);
+       
+      while (newbutton == 10) {
+        delay(1000);
+        check_buttons;
+      }
+      
+      expression_change(dead_tired,100,1000);
+      expression_change(tired_normal,100,200);
+     
+  //++++++++++++++++ NO BUTTON THIS IS THE MAIN LOOPED "MOVIE" +++++++++++++++++++++  
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
+    }
+    else // the program that plays until buttons are pushed
+         //if no buttons - designed to play a 3 minute show of all the emotions
+    {
+      
+     //start with some blinks, max 25 sec - 5 passes at 2 blinks per fucntion at 2.5 sec each - 
+     check_buttons();
+     int counter=0;
+     while (newbutton == 0 && counter<5) {  
+      blinking(2500,2,0);
+      counter++;
+     }
+     // throw in 2 quick blinks for randomness - 26 sec
+     blinking(500,2,0);
+ 
+     //more blinks   52 sec
+     check_buttons();
+     counter=0;
+     while (newbutton == 0 && counter<5) {  
+      blinking(2500,2,0);
+      counter++;
+     }
+     
+      //look left for a seocnd     53 sec
+      expression_change(normal_left,100,1000);
+      expression_change(left_normal,100,100);
+      
+     //more blinks  20 sec of blinking 1m 15sec
+     check_buttons();
+     counter=0;
+     while (newbutton == 0 && counter<4) {  
+      blinking(2500,2,0);
+      counter++;
+     }
+     
+     // throw in 2 quick blinks for randomness - 1m 18s c
+     blinking(500,2,0);
+     
+      //look right for a seocnd     1m 20s 
+      expression_change(normal_right,100,1000);
+      expression_change(right_normal,100,100);
+      
+      //blink twice more     1m 25s
+      blinking(2500,2,0);
+      
+      //look left and be surprised   1m 35s
+      expression_change(normal_left,100,2000);
+      expression_change(left_leftsurprise,100,4000);
+      
+      //back to center surprised    1m 38s
+      expression_change(leftsurprise_surprise,100,3000);
+    
+      //terror                      1m 45s
+      expression_change(surprise_terror,100,5000);  
+     
+      //terror and cry   1m 53s
+      check_buttons();
+      expression_change(terror_sadterror,100,1000); 
+      counter=0;
+      while (newbutton == 0 && counter<4) { 
+        cry (1500,4,1); //this is the version of cry for terror
+        counter++;
+      }
+      
+      //from cry terror to anger                      2m 00s
+      expression_change(cryterror_angry,100,5000); 
+     
+     
+     //back to normal                        2m 01s
+      expression_change(angry_annoyed,100,1000);
+      expression_change(annoyed_normal,100,100);
+     
+     //blinks,  25 sec - -                  2m 26s
+     check_buttons();
+     counter=0;
+     while (newbutton == 0 && counter<5) {  
+      blinking(2500,2,0);
+      counter++;
+     }
+     // throw in 2 quick blinks for randomness - 2m 27 sec
+     blinking(500,2,0); 
+     
+     //happy                                      2m 47s
+      check_buttons();
+      counter=0;
+      while (newbutton == 3 && counter<5) {
+        blinking(3000,3,1);   //this is the happy blink function
+        blinking(500,1,1);
+        check_buttons;
+      }
+      expression_change(happy_normal,100,200);  
+     
+      //blinking normal                         3m 00s
+      check_buttons();
+      counter=0;
+      while (newbutton == 3 && counter<5) {
+        blinking(3000,3,0);   //this is the happy blink function
+        blinking(500,1,0);
+        check_buttons;
+      } 
+      
+      expression_change(happy_normal,100,200);   
+   
+     check_buttons(); //cry sequence max 10 tears     3m 15s
+     counter = 0;
+     expression_change(normal_sad,70,1000);
+     while (newbutton == 0 && counter<10) { 
+      cry (1500,1,0);
+      counter++;
+     }
+     expression_change(sad_normal,100,200);
+    
+
+
+  }
+ 
+}
+
+//+++++++++++++++++++++++++++++++++++  end main +++++++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+//******************************  change expression function  *************************************
+
+
+void expression_change(int change_array[11][6],int delay_loop,int delay_expression){
+
+//transition program
+//transition through steps to animate from one expression to another as passed to "change_array", 
+//delay_loop is time between frames, 
+//delay expression is time held in the final expression before moving to another expression
+
+  Serial.print("newbutton pushed from chg array ");
+  Serial.println(newbutton);
+  Serial.print("no button changed from chg array ");
+  Serial.println(no_button_pushed);
+  
+  
+  for (int x=0;x<5;x++){
+  //there are 5 possible transitions when going from one expression to another. Some expressions will use all 5, other will not change at all.
+  //the change array element going from one pin to another will determine this (i.e. if the immediate pin after the last is the same, no chg will occur.
+  // this program test each of 11 segments (e.g. eyebrows, topmouth, etc.) to see if a change occurred and if so how many strands need to change to make a smooth animation
+
+    // eyebrows
+    if (change_array[eyebrows][x]!=change_array[eyebrows][x+1]) {
+      digitalWrite(change_array[eyebrows][x],LOW);
+      digitalWrite(change_array[eyebrows][x+1],HIGH);
+    }
+    // topeye
+    if (change_array[topeye][x]!=change_array[topeye][x+1]) {
+    digitalWrite(change_array[topeye][x],LOW);
+    digitalWrite(change_array[topeye][x+1],HIGH);
+    }
+    // bottomeye
+    if (change_array[bottomeye][x]!=change_array[bottomeye][x+1]) {
+    digitalWrite(change_array[bottomeye][x],LOW);
+    digitalWrite(change_array[bottomeye][x+1],HIGH);
+    }
+    // eyelids
+    if (change_array[eyelids][x]!=change_array[eyelids][x+1]) {
+    digitalWrite(change_array[eyelids][x],LOW);
+    digitalWrite(change_array[eyelids][x+1],HIGH);
+    }
+    // topeyeballs
+    if (change_array[topeyeballs][x]!=change_array[topeyeballs][x+1]) {
+    digitalWrite(change_array[topeyeballs][x],LOW);
+    digitalWrite(change_array[topeyeballs][x+1],HIGH);
+    }
+    // mideyeballs
+    if (change_array[mideyeballs][x]!=change_array[mideyeballs][x+1]) {
+    digitalWrite(change_array[mideyeballs][x],LOW);
+    digitalWrite(change_array[mideyeballs][x+1],HIGH);
+    }
+    // loweyeballs
+    if (change_array[loweyeballs][x]!=change_array[loweyeballs][x+1]) {
+    digitalWrite(change_array[loweyeballs][x],LOW);
+    digitalWrite(change_array[loweyeballs][x+1],HIGH);
+    }
+    //topmouth
+    if (change_array[topmouth][x]!=change_array[topmouth][x+1]) {
+    digitalWrite(change_array[topmouth][x],LOW);
+    digitalWrite(change_array[topmouth][x+1],HIGH);
+    }
+    //bottommouth
+    if (change_array[bottommouth][x]!=change_array[bottommouth][x+1]) {
+    digitalWrite(change_array[bottommouth][x],LOW);
+    digitalWrite(change_array[bottommouth][x+1],HIGH);
+    }
+    //eyerings
+    if (change_array[eyerings][x]!=change_array[eyerings][x+1]) {
+    digitalWrite(change_array[eyerings][x],LOW);
+    digitalWrite(change_array[eyerings][x+1],HIGH);
+    }
+    //teardrops
+    if (change_array[teardrops][x]!=change_array[teardrops][x+1]) {
+    digitalWrite(change_array[teardrops][x],LOW);
+    digitalWrite(change_array[teardrops][x+1],HIGH);
+    }
+    delay(delay_loop);
+  }
+  //wait on expression the passed thru time unless a button is pushed - then break
+ 
+  int counter=0;
+  check_buttons();
+  while (counter < delay_expression/1000 && no_button_pushed) {
+       check_buttons();
+       delay(1000);
+      counter++;
+    
+ }
+
+}
+
+//****************************  end change expression function*********************
+//*********************************************************************************
+
+
+
+//*****************************  blinking function  **************************
+
+void blinking(int blinkspeed,int numblinks,int normalORhappy){
+  //normal = 0, surprise = 1
+  // call the blinkclosed_normal function and normal_blinkclosed functions to complete a blink
+  // pause between blinks as the blinkspeed (3 sec or 3000 ms is normal), and do num of blinks called
+  //check_buttons - if a button pushed - break
+
+int counter=0;
+check_buttons();
+
+while (counter < numblinks && no_button_pushed == 1) {
+   check_buttons();
+   if (normalORhappy) {
+     expression_change(normal_blinkclosed,40,100);
+     expression_change(blinkclosed_normal,40,blinkspeed);
+   }
+   else {
+     expression_change(normal_blinkclosed,40,100);
+     expression_change(blinkclosed_normal,40,blinkspeed);
+   }
+  
+   counter++;
+    
+  }
+
+  
+}
+
+//****************************  end blink  ********************************
+//*********************************************************************************
+
+
+
+//*****************************  cry function  **************************
+
+void cry(int cryspeed,int numtears,int type){
+  //type: 0 = normal cry; 1 = terror cry
+  // call the sad_cry function to complete a tear
+  // pause between tears as the cryspeed (1 sec or 1000 ms is normal), and do num of tears called
+  //note: always end with the cry_sad function to make future transistions easier
+  //check_buttons - if a button pushed - break
+
+int counter=0;
+check_buttons();
+
+while (counter < numtears && no_button_pushed == 1) {
+   check_buttons();
+   if (type){
+     expression_change(sadterror_cryterror,40,cryspeed);
+   }
+   else {
+   expression_change(sad_cry,40,cryspeed);
+   expression_change(cry_sad,10,10);
+   }
+   counter++;
+    
+  }
+
+  
+}
+
+//****************************  end cry  ********************************
+//*********************************************************************************
+
+
+//*****************************  check buttons function  **************************
+
+void check_buttons(){
+  //this function is used to break out of loops to respond more quickly to buttons
+  // check if any button has been pushed (F does not count)
+
+lastbutton = newbutton;
+
+  if (digitalRead(8) == HIGH) {
+      if (digitalRead(11) == HIGH) 
+      {
+      newbutton=6;
+      }
+      else if (digitalRead(27) == HIGH){
+      newbutton =7;
+      }
+      else if (digitalRead(24) == HIGH){
+      newbutton=8;
+      }
+      else if (digitalRead(43) == HIGH){
+      newbutton=9; 
+      }
+      else if(digitalRead(44) == HIGH) {
+      newbutton=10;
+      }
+  }
+  else if (digitalRead(27) == HIGH){
+   newbutton =2;
+  }
+   else if (digitalRead(24) == HIGH){
+    newbutton=3;
+  }
+   else if (digitalRead(43) == HIGH){
+    newbutton=4; 
+  }
+   else if(digitalRead(44) == HIGH) {
+    newbutton=5;
+  }
+   else if(digitalRead(11) == HIGH) {
+    newbutton=1;
+  }
+   else {
+   newbutton = 0;
+  }
+  
+  if (lastbutton == newbutton){
+    no_button_pushed = 1; //no button pushed is true - 
+  }
+  else {
+    no_button_pushed = 0; //a button was pushed - other than function, so its not true that no button was pushed
+  }
+  
+}
+
+//****************************  end check buttons  ********************************
+//*********************************************************************************
